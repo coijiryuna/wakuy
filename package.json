@@ -1,10 +1,10 @@
 {
-  "name": "@ookamiiixd/baileys-store",
+  "name": "@wakuy/baileys-store",
   "version": "1.0.0-beta.1",
   "description": "Minimal Baileys data storage for your favorite DBMS built with Prisma",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "repository": "https://github.com/ookamiiixd/baileys-store.git",
+  "repository": "https://github.com/coijiryuna/wakuy.git",
   "author": "Royhan (https://github.com/ookamiiixd)",
   "license": "MIT",
   "scripts": {
@@ -14,24 +14,24 @@
     "format": "prettier . --write"
   },
   "devDependencies": {
-    "@adiwajshing/baileys": "^5.0.0",
-    "@prisma/client": "^4.7.1",
-    "@types/node": "^18.11.10",
-    "@typescript-eslint/eslint-plugin": "^5.45.0",
-    "@typescript-eslint/parser": "^5.45.0",
-    "eslint": "^8.29.0",
-    "eslint-config-prettier": "^8.5.0",
-    "prettier": "^2.8.0",
-    "prisma": "^4.7.1",
-    "ts-node": "^10.9.1",
-    "typescript": "^4.9.3"
+    "@prisma/client": "^5.11.0",
+    "@types/node": "^20.11.27",
+    "@typescript-eslint/eslint-plugin": "^7.2.0",
+    "@typescript-eslint/parser": "^7.2.0",
+    "@whiskeysockets/baileys": "^6.6.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.2.5",
+    "prisma": "^5.11.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.2"
   },
   "dependencies": {
-    "tiny-invariant": "^1.3.1"
+    "tiny-invariant": "^1.3.3"
   },
   "peerDependencies": {
-    "@adiwajshing/baileys": "^5.0.0",
-    "@prisma/client": "^4.7.0"
+    "@prisma/client": "^5.11.0",
+    "@whiskeysockets/baileys": "^6.6.0"
   },
   "files": [
     "dist/",

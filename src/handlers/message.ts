@@ -3,8 +3,8 @@ import type {
   MessageUserReceipt,
   proto,
   WAMessageKey,
-} from '@adiwajshing/baileys';
-import { jidNormalizedUser, toNumber } from '@adiwajshing/baileys';
+} from '@whiskeysockets/baileys';
+import { jidNormalizedUser, toNumber } from '@whiskeysockets/baileys';
 import { useLogger, usePrisma } from '../shared';
 import type { BaileysEventHandler } from '../types';
 import { transformPrisma } from '../utils';
@@ -25,7 +25,9 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
         await tx.message.createMany({
           data: messages.map((message) => ({
             ...transformPrisma(message),
-            remoteJid: message.key.remoteJid!,
+            remoteJid: jidNormalizedUser(message.key.remoteJid!),
+            fromMe: message.key.fromMe,
+            participant: message.key.participant,
             id: message.key.id!,
             sessionId,
           })),
@@ -43,20 +45,21 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
       case 'notify':
         for (const message of messages) {
           try {
-            const jid = jidNormalizedUser(message.key.remoteJid!);
+            const id = message.key.id!
+            const remoteJid = jidNormalizedUser(message.key.remoteJid!);
             const data = transformPrisma(message);
             await prisma.message.upsert({
               select: { pkId: true },
-              create: { ...data, remoteJid: jid, id: message.key.id!, sessionId },
+              create: { ...data, remoteJid, id, fromMe: message.key.fromMe, participant: message.key.participant, sessionId },
               update: { ...data },
-              where: { sessionId_remoteJid_id: { remoteJid: jid, id: message.key.id!, sessionId } },
+              where: { sessionId_remoteJid_id: { remoteJid, id, sessionId } },
             });
 
-            const chatExists = (await prisma.chat.count({ where: { id: jid, sessionId } })) > 0;
+            const chatExists = (await prisma.chat.count({ where: { id: remoteJid, sessionId } })) > 0;
             if (type === 'notify' && !chatExists) {
               event.emit('chats.upsert', [
                 {
-                  id: jid,
+                  id: remoteJid,
                   conversationTimestamp: toNumber(message.messageTimestamp),
                   unreadCount: 1,
                 },
@@ -74,16 +77,17 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
     for (const { update, key } of updates) {
       try {
         await prisma.$transaction(async (tx) => {
-          const prevData = await tx.message.findFirst({
-            where: { id: key.id!, remoteJid: key.remoteJid!, sessionId },
-          });
-          if (!prevData) {
-            return logger.info({ update }, 'Got update for non existent message');
-          }
+          // const prevData = await tx.message.findFirst({
+          //   where: { id: key.id!, remoteJid: key.remoteJid!, sessionId },
+          // });
+          // if (!prevData) {
+          //   return logger.info({ update }, 'Got update for non existent message');
+          // }
 
-          const data = { ...prevData, ...update } as proto.IWebMessageInfo;
-          await tx.message.delete({
+          // const data = { ...prevData, ...update } as proto.IWebMessageInfo;
+          const updated = await tx.message.update({
             select: { pkId: true },
+            data: transformPrisma(update),
             where: {
               sessionId_remoteJid_id: {
                 id: key.id!,
@@ -92,15 +96,17 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
               },
             },
           });
-          await tx.message.create({
-            select: { pkId: true },
-            data: {
-              ...transformPrisma(data),
-              id: data.key.id!,
-              remoteJid: data.key.remoteJid!,
-              sessionId,
-            },
-          });
+          if (!updated.pkId)
+            logger.debug({ update }, 'Got update for non existent message');
+          // await tx.message.create({
+          //   select: { pkId: true },
+          //   data: {
+          //     ...transformPrisma(data),
+          //     id: data.key.id!,
+          //     remoteJid: data.key.remoteJid!,
+          //     sessionId,
+          //   },
+          // });
         });
       } catch (e) {
         logger.error(e, 'An error occured during message update');
@@ -176,7 +182,7 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
             (r) => getKeyAuthor(r.key) !== authorID
           );
 
-          if (reaction.text) reactions.push(reaction);
+          if (reaction.text) reactions.push(transformPrisma(reaction));
           await tx.message.update({
             select: { pkId: true },
             data: transformPrisma({ reactions: reactions }),
